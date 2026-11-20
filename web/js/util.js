@@ -39,8 +39,14 @@ export function stars(r) {
   const full = Math.round(r);
   return `<span class="stars" aria-label="${r} out of 5">${"★".repeat(full)}${"☆".repeat(5 - full)}</span>`;
 }
-export function scoreRing(score, grade, size = "") {
+export function scoreRing(score, grade, size = "", limited = false) {
+  if (limited || grade === "?")
+    return `<div class="score N ${size}" style="--s:${score}" title="Limited data: score ${score}/100 rests partly on neutral defaults"><span>${score}<small>limited</small></span></div>`;
   return `<div class="score ${grade} ${size}" style="--s:${score}" title="Trust score ${score}/100 (grade ${grade})"><span>${score}<small>${grade}</small></span></div>`;
+}
+export function priceRange(min, max) {
+  if (min == null && max == null) return '<span class="muted">Not published</span>';
+  return `${inr(min)} – ${inr(max)}`;
 }
 export function reraBadge(status) {
   const cls = { Registered: "good", Applied: "warn", Lapsed: "bad", Revoked: "bad", "Not Registered": "bad" }[status] || "";
@@ -54,6 +60,13 @@ export function fairBadge(fp) {
   if (!fp || fp.delta_pct == null) return "";
   const cls = fp.verdict.startsWith("Below") ? "good" : fp.verdict.startsWith("Premium") ? "warn" : "";
   return `<span class="badge ${cls}" title="vs locality median ${psf(fp.locality_median_psf)}">${esc(fp.verdict)} (${pct(fp.delta_pct)})</span>`;
+}
+
+export function sourceBadge(p) {
+  if (p.is_demo) return `<span class="badge warn">Demo record</span>`;
+  return p.rera_url
+    ? `<a class="badge info" href="${esc(p.rera_url)}" target="_blank" rel="noopener" title="Official RERA register">Source: ${esc(p.rera_authority || "RERA")} ↗</a>`
+    : `<span class="badge info">Source: ${esc(p.rera_authority || "RERA")}</span>`;
 }
 
 export const $ = (sel, root = document) => root.querySelector(sel);

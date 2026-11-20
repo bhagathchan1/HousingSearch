@@ -1,6 +1,6 @@
 // Explore (search + filters + results) and Map views.
 import { api } from "../api.js";
-import { $, $$, esc, inr, psf, date, trendArrow, scoreRing, reraBadge, statusBadge, fairBadge, stars, debounce } from "../util.js";
+import { $, $$, esc, inr, psf, date, trendArrow, scoreRing, reraBadge, statusBadge, fairBadge, stars, debounce, priceRange } from "../util.js";
 import { state, onChange } from "../state.js";
 
 const BUDGETS = [0, 2.5e6, 5e6, 7.5e6, 1e7, 1.5e7, 2e7, 3e7, 5e7, 1e8, 2e8];
@@ -163,7 +163,11 @@ export async function renderExplore(main, meta, query) {
     const data = await api.search(params);
     lastData = data;
     $("#resultsTitle").textContent = `${data.total} project${data.total === 1 ? "" : "s"} in ${city.city}`;
-    $("#resultsSub").textContent = f.q ? `Matching “${f.q}”` : `Prices compiled from ${meta.cities.length > 0 ? "multiple portals, builders and brokers" : ""}; last update ${date(meta.last_price_update, true)}`;
+    $("#resultsSub").textContent = f.q
+      ? `Matching “${f.q}”`
+      : meta.has_real_data
+        ? `Projects from the official RERA register${meta.with_prices ? ` · prices for ${meta.with_prices} projects, last update ${date(meta.last_price_update, true)}` : " · prices not yet added"}`
+        : `Prices compiled from multiple portals, builders and brokers; last update ${date(meta.last_price_update, true)}`;
     renderActive(f);
     renderCards(data.results);
     renderPager(data);
@@ -306,11 +310,23 @@ function filtersHtml(meta, city, f) {
   </div>`;
 }
 
+function cardStats(p) {
+  const cell = (l, v, extra = "") => `<div><div class="l">${l}</div><div class="v">${v}</div>${extra}</div>`;
+  const cells = [cell("Price", priceRange(p.price_min, p.price_max))];
+  if (p.psf) cells.push(cell("Rate", psf(p.psf), p.price_change_12m != null ? `<div class="small">${trendArrow(p.price_change_12m)} <span class="muted">12m</span></div>` : ""));
+  cells.push(cell(p.status === "Ready to Move" ? "Status" : "Possession", p.status === "Ready to Move" ? "Ready" : p.possession_date ? date(p.possession_date) : '<span class="muted">Not listed</span>'));
+  if (p.configs.length) cells.push(cell("Configs", `<span class="small">${esc(p.configs.slice(0, 4).join(", ") + (p.configs.length > 4 ? "…" : ""))}</span>`));
+  if (p.available_units != null) cells.push(cell("Available", `${p.available_units}<span class="muted small"> / ${p.total_units ?? "—"}</span>`));
+  else if (p.total_units) cells.push(cell("Units", p.total_units.toLocaleString("en-IN")));
+  if (p.review_count) cells.push(cell("Reviews", `<span class="small">${p.avg_rating ? stars(p.avg_rating) + " " + p.avg_rating : ""} <span class="muted">(${p.review_count})</span></span>`));
+  if (!p.is_demo && p.rera_number) cells.push(cell("RERA no.", `<span class="small" style="word-break:break-all">${esc(p.rera_number)}</span>`));
+  return cells.slice(0, 6).join("");
+}
+
 export function cardHtml(p) {
   const flag = p.top_flag
     ? `<div class="flag ${p.flags_critical ? "" : "warn"}">⚠ ${esc(p.top_flag)}${p.flags_critical + p.flags_warning > 1 ? ` <span class="small">+${p.flags_critical + p.flags_warning - 1} more</span>` : ""}</div>`
     : "";
-  const configs = p.configs.slice(0, 4).join(", ") + (p.configs.length > 4 ? "…" : "");
   return `
   <article class="pcard card">
     <div class="top">
@@ -318,21 +334,14 @@ export function cardHtml(p) {
         <a href="#/property/${p.id}">${esc(p.name)}</a>
         <div class="sub">${esc(p.builder || "")} · ${esc(p.locality)}, ${esc(p.city)}</div>
       </div>
-      ${scoreRing(p.trust_score, p.trust_grade)}
+      ${scoreRing(p.trust_score, p.trust_grade, "", p.trust_limited)}
     </div>
     <div class="badges">${statusBadge(p.status)} ${reraBadge(p.rera_status)} ${fairBadge(p.fair_price)}
       ${p.overdue_months ? `<span class="badge bad">Overdue ${p.overdue_months} mo</span>` : ""}</div>
-    <div class="stats">
-      <div><div class="l">Price</div><div class="v">${inr(p.price_min)} – ${inr(p.price_max)}</div></div>
-      <div><div class="l">Rate</div><div class="v">${psf(p.psf)}</div><div class="small">${trendArrow(p.price_change_12m)} <span class="muted">12m</span></div></div>
-      <div><div class="l">Possession</div><div class="v">${p.status === "Ready to Move" ? "Ready" : date(p.possession_date)}</div></div>
-      <div><div class="l">Configs</div><div class="v small">${esc(configs)}</div></div>
-      <div><div class="l">Available</div><div class="v">${p.available_units ?? "—"}<span class="muted small"> / ${p.total_units ?? "—"}</span></div></div>
-      <div><div class="l">Reviews</div><div class="v small">${p.avg_rating ? stars(p.avg_rating) + " " + p.avg_rating : "—"} <span class="muted">(${p.review_count})</span></div></div>
-    </div>
+    <div class="stats">${cardStats(p)}</div>
     ${flag}
     <div class="foot">
-      <span class="small muted">${p.source_count} price sources · approvals ${p.approvals_pct ?? "—"}%</span>
+      <span class="small muted">${p.is_demo ? `${p.source_count} price sources · approvals ${p.approvals_pct ?? "—"}%` : `${p.source_count ? p.source_count + " price sources" : "No prices yet"} · ${esc(p.rera_authority || "RERA")}`}</span>
       <span class="spacer"></span>
       <button class="btn small ${state.isShortlisted(p.id) ? "on" : ""}" data-act="short" data-id="${p.id}" title="Shortlist">${state.isShortlisted(p.id) ? "♥" : "♡"}</button>
       <button class="btn small ${state.inCompare(p.id) ? "on" : ""}" data-act="cmp" data-id="${p.id}" title="Add to compare">⇄</button>
@@ -364,7 +373,7 @@ export async function renderMap(main, meta, query) {
       <div><h1 id="mapTitle">Map of ${esc(city.city)}</h1><div class="muted small">Colour = trust grade. Click a pin for details. Filters from the Explore page apply here.</div></div>
       <a class="btn" href="#/?${new URLSearchParams(query)}">⚙ Edit filters / list view</a>
     </div>
-    <div class="legend">${Object.entries(GRADE_COLORS).map(([g, c]) => `<span><i class="dot" style="background:${c}"></i>Grade ${g}</span>`).join("")}</div>
+    <div class="legend">${Object.entries(GRADE_COLORS).map(([g, c]) => `<span><i class="dot" style="background:${c}"></i>Grade ${g}</span>`).join("")}<span><i class="dot" style="background:#64748b"></i>Limited data</span></div>
     <div id="mapView"></div>`;
   let results = [];
   let page = 1;
@@ -374,7 +383,8 @@ export async function renderMap(main, meta, query) {
     if (results.length >= d.total || !d.results.length) break;
     page++;
   }
-  $("#mapTitle").textContent = `${results.length} projects on the map · ${city.city}`;
+  const located = results.filter((r) => r.lat).length;
+  $("#mapTitle").textContent = `${located} projects on the map · ${city.city}` + (located < results.length ? ` (${results.length - located} have no published location)` : "");
   if (!window.L) {
     $("#mapView").innerHTML = `<div class="empty">Map library could not load (offline?). Use the list view instead.</div>`;
     return;
@@ -385,11 +395,11 @@ export async function renderMap(main, meta, query) {
     maxZoom: 18, attribution: "© OpenStreetMap contributors",
   }).addTo(map);
   pts.forEach((p) => {
-    L.circleMarker([p.lat, p.lng], { radius: 9, color: "#fff", weight: 2, fillColor: GRADE_COLORS[p.trust_grade], fillOpacity: 0.9 })
+    L.circleMarker([p.lat, p.lng], { radius: 8, color: "#fff", weight: 2, fillColor: GRADE_COLORS[p.trust_grade] || "#64748b", fillOpacity: 0.9 })
       .addTo(map)
       .bindPopup(`<strong><a href="#/property/${p.id}">${esc(p.name)}</a></strong><br>${esc(p.builder || "")}<br>
-        ${esc(p.locality)} · ${esc(p.status)}<br>${inr(p.price_min)} – ${inr(p.price_max)} · ${psf(p.psf)}<br>
-        Trust ${p.trust_score} (${p.trust_grade}) · RERA ${esc(p.rera_status)}`);
+        ${esc(p.locality)} · ${esc(p.status)}<br>${priceRange(p.price_min, p.price_max)}${p.psf ? " · " + psf(p.psf) : ""}<br>
+        Trust ${p.trust_score}${p.trust_limited ? " (limited data)" : ` (${p.trust_grade})`} · RERA ${esc(p.rera_status)}`);
   });
   if (pts.length) map.fitBounds(pts.map((p) => [p.lat, p.lng]), { padding: [30, 30] });
   else map.setView([20.6, 78.9], 5);

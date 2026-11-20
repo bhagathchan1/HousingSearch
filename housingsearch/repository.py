@@ -98,6 +98,7 @@ class Repository:
                 "rera_status": p.get("rera_status"),
                 "rera_number": p.get("rera_number"),
                 "possession_date": p.get("rera_possession_date"),
+                "launch_date": p.get("launch_date"),
                 "builder_possession_date": p.get("builder_possession_date"),
                 "price_min": min(prices) if prices else None,
                 "price_max": max(prices) if prices else None,
@@ -118,6 +119,10 @@ class Repository:
                 "avg_rating": rv.get("avg_rating"),
                 "trust_score": ts["score"],
                 "trust_grade": ts["grade"],
+                "trust_limited": ts["limited"],
+                "data_coverage": ts["coverage_pct"],
+                "rera_authority": p.get("rera_authority"),
+                "rera_url": p.get("rera_url"),
                 "flags_critical": sum(1 for f in flags if f["level"] == "critical"),
                 "flags_warning": sum(1 for f in flags if f["level"] == "warning"),
                 "top_flag": flags[0]["title"] if flags and flags[0]["level"] != "info" else None,
@@ -146,7 +151,7 @@ class Repository:
         sort = f.get("sort") or ("relevance" if q else "trust")
         keyfuncs = {
             "relevance": lambda t: (-t[0], -t[1]["trust_score"]),
-            "trust": lambda t: -t[1]["trust_score"],
+            "trust": lambda t: (-t[1]["trust_score"], t[1]["trust_limited"], _neg_date(t[1]["launch_date"])),
             "price_asc": lambda t: t[1]["price_min"] or 1e15,
             "price_desc": lambda t: -(t[1]["price_max"] or 0),
             "psf_asc": lambda t: t[1]["psf"] or 1e9,
@@ -227,8 +232,9 @@ class Repository:
         # similar projects: same city, overlapping price band, nearest psf
         me = idx.get(pid, {})
         similar = sorted(
-            (it for it in idx.values() if it["id"] != pid and it["city"] == p["city"] and it["psf"]),
-            key=lambda it: (it["locality"] != p["locality"], abs((it["psf"] or 0) - (me.get("psf") or 0))),
+            (it for it in idx.values() if it["id"] != pid and it["city"] == p["city"]),
+            key=lambda it: (it["locality"] != p["locality"], it["psf"] is None,
+                            abs((it["psf"] or 0) - (me.get("psf") or 0)), -it["trust_score"]),
         )[:6]
 
         detail = {
@@ -283,6 +289,11 @@ class Repository:
             "amenities": [a for a, _ in sorted(amen.items(), key=lambda t: -t[1])],
             "price_range": [min(prices), max(prices)] if prices else [0, 0],
             "has_demo_data": any(it["is_demo"] for it in idx),
+            "has_real_data": any(not it["is_demo"] for it in idx),
+            "sources": [{"authority": a, "count": n} for a, n in sorted(
+                _count(it["rera_authority"] for it in idx if not it["is_demo"] and it["rera_authority"]).items(),
+                key=lambda t: -t[1])],
+            "with_prices": sum(1 for it in idx if it["psf"]),
             "last_price_update": last_update,
             "approvals_catalog": catalog.APPROVALS,
             "states": catalog.STATES,
@@ -324,6 +335,20 @@ def _group(conn, table: str) -> dict[int, list[dict]]:
     out: dict[int, list[dict]] = {}
     for r in conn.execute(f"SELECT * FROM {table}"):
         out.setdefault(r["property_id"], []).append(dict(r))
+    return out
+
+
+def _neg_date(d: str | None) -> str:
+    """Sort key that puts newer ISO dates first (missing dates last)."""
+    if not d:
+        return "~"
+    return "".join(chr(ord("9") - ord(c) + ord("0")) if c.isdigit() else c for c in d)
+
+
+def _count(values) -> dict:
+    out: dict = {}
+    for v in values:
+        out[v] = out.get(v, 0) + 1
     return out
 
 

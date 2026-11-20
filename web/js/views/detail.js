@@ -1,6 +1,6 @@
 // Property detail: everything known about one project, in one page.
 import { api } from "../api.js";
-import { $, $$, esc, inr, psf, num, pct, date, ago, trendArrow, stars, scoreRing, reraBadge, statusBadge, fairBadge, emi, toast } from "../util.js";
+import { $, $$, esc, inr, psf, num, pct, date, ago, trendArrow, stars, scoreRing, reraBadge, statusBadge, fairBadge, emi, toast, priceRange, sourceBadge } from "../util.js";
 import { state, onChange } from "../state.js";
 import { lineChart } from "../charts.js";
 
@@ -10,6 +10,7 @@ const SECTIONS = [
   ["location", "Location"], ["costs", "Total cost & EMI"], ["verify", "Verify live"], ["checklist", "Buyer checklist"],
 ];
 const STATUS_ICON = { Obtained: "✓", Pending: "…", Missing: "✕", Unknown: "?", "Not Yet Due": "–", "Not Applicable": "n/a" };
+const STATUS_LABEL = { Unknown: "Not verified" };
 
 export async function renderDetail(main, meta, id) {
   const d = await api.property(id);
@@ -25,13 +26,13 @@ export async function renderDetail(main, meta, id) {
       <h1>${esc(p.name)}</h1>
       <div class="meta">by ${b ? `<a href="#/builder/${b.id}">${esc(b.name)}</a>` : "Unknown builder"} · ${esc(p.address || p.locality + ", " + p.city)}</div>
       <div class="chips" style="margin-top:8px">${statusBadge(p.status)} ${reraBadge(p.rera_status)} <span class="badge">${esc(p.property_type || "")}</span> ${fairBadge(d.fair_price)}
-        ${p.is_demo ? `<span class="badge warn">Demo record</span>` : ""}</div>
+        ${sourceBadge(p)}</div>
       <div class="kpis" style="margin-top:14px">
-        ${kpi("Price range", `${inr(s.price_min)} – ${inr(s.price_max)}`, s.configs.join(" · "))}
+        ${kpi("Price range", priceRange(s.price_min, s.price_max), s.price_min == null ? "Check “Verify live” below" : s.configs.join(" · "))}
         ${kpi("Median rate", psf(d.prices.psf_median), d.prices.has_data ? `${trendArrow(d.prices.change_12m_pct)} last 12 months` : "")}
         ${kpi("Possession (RERA)", p.status === "Ready to Move" ? "Ready to move" : date(p.rera_possession_date), d.delivery.overdue_months ? `<span class="down">overdue ${d.delivery.overdue_months} mo</span>` : p.builder_possession_date ? "Builder says " + date(p.builder_possession_date) : "")}
-        ${kpi("Units available", `${num(p.available_units)} / ${num(p.total_units)}`, p.total_units ? Math.round((1 - p.available_units / p.total_units) * 100) + "% sold" : "")}
-        ${kpi("Approvals", d.approvals.completeness_pct != null ? d.approvals.completeness_pct + "%" : "—", `${d.approvals.obtained_count}/${d.approvals.due_count} due obtained`)}
+        ${kpi(p.available_units == null ? "Total units" : "Units available", p.available_units == null ? num(p.total_units) : `${num(p.available_units)} / ${num(p.total_units)}`, p.total_units && p.available_units != null ? Math.round((1 - p.available_units / p.total_units) * 100) + "% sold" : "")}
+        ${kpi("Approvals", d.approvals.unverified_count ? `${d.approvals.obtained_count} of ${d.approvals.due_count}` : d.approvals.completeness_pct != null ? d.approvals.completeness_pct + "%" : "—", d.approvals.unverified_count ? `confirmed · ${d.approvals.unverified_count} not verified yet` : `${d.approvals.obtained_count}/${d.approvals.due_count} due obtained`)}
         ${kpi("Reviews", d.reviews_summary.avg_rating ? d.reviews_summary.avg_rating + " ★" : d.reviews_summary.count ? d.reviews_summary.positive_pct + "% positive" : "—", `${d.reviews_summary.count} reviews, ${(d.reviews_summary.sources || []).length} sources`)}
       </div>
       <div class="actions">
@@ -43,8 +44,8 @@ export async function renderDetail(main, meta, id) {
       </div>
     </div>
     <div style="text-align:center">
-      ${scoreRing(d.trust.score, d.trust.grade)}
-      <div class="small muted" style="margin-top:6px">Trust score</div>
+      ${scoreRing(d.trust.score, d.trust.grade, "", d.trust.limited)}
+      <div class="small muted" style="margin-top:6px">Trust score${d.trust.limited ? ` · ${d.trust.coverage_pct}% data` : ""}</div>
       <a href="#" class="small" id="howScore">How is this calculated?</a>
     </div>
   </div>
@@ -74,7 +75,7 @@ export async function renderDetail(main, meta, id) {
         <div class="small muted">Saved in this browser only.</div>
       </div>
       ${d.similar.length ? `<div class="card panel"><h3>Similar projects nearby</h3><div class="similar" style="grid-template-columns:1fr">${d.similar
-        .map((x) => `<a class="card" href="#/property/${x.id}"><strong>${esc(x.name)}</strong><div class="small muted">${esc(x.locality)} · ${psf(x.psf)} · Trust ${x.trust_score}</div><div class="small">${inr(x.price_min)} – ${inr(x.price_max)}</div></a>`)
+        .map((x) => `<a class="card" href="#/property/${x.id}"><strong>${esc(x.name)}</strong><div class="small muted">${esc(x.locality)}${x.psf ? " · " + psf(x.psf) : ""} · ${esc(x.status || "")}</div><div class="small">${priceRange(x.price_min, x.price_max)}</div></a>`)
         .join("")}</div></div>` : ""}
     </aside>
   </div>`;
@@ -214,11 +215,11 @@ function configs(d) {
         return `<tr>
           <td><strong>${esc(c.label)}</strong></td>
           <td class="num">${num(c.carpet_sqft)} sq ft</td>
-          <td class="num">${num(c.super_builtup_sqft)} sq ft</td>
+          <td class="num">${c.super_builtup_sqft ? num(c.super_builtup_sqft) + " sq ft" : "—"}</td>
           <td class="num">${load != null ? `<span class="${load > 35 ? "down" : ""}">${load}%</span>` : "—"}</td>
-          <td class="num nowrap">${inr(c.price_min)} – ${inr(c.price_max)}</td>
-          <td class="num">${c.carpet_sqft ? psf(c.price_min / c.carpet_sqft) : "—"}</td>
-          <td style="min-width:140px">${c.units_total ? `<div class="small">${c.units_available} of ${c.units_total} left</div><div class="bar"><span style="width:${avail}%"></span></div>` : "—"}</td>
+          <td class="num nowrap">${priceRange(c.price_min, c.price_max)}</td>
+          <td class="num">${c.carpet_sqft && c.price_min ? psf(c.price_min / c.carpet_sqft) : "—"}</td>
+          <td style="min-width:140px">${c.units_total && c.units_available != null ? `<div class="small">${c.units_available} of ${c.units_total} left</div><div class="bar"><span style="width:${avail}%"></span></div>` : c.units_total ? `<div class="small">${c.units_total} units</div>` : "—"}</td>
           <td class="small">${esc(c.facing || "—")}</td>
         </tr>`;
       }).join("")}</tbody>
@@ -242,6 +243,7 @@ function delivery(d) {
   if (p.status === "Ready to Move") verdict = `<div class="flagrow ok"><span>✓</span><div><div class="t">Completed — ready to move</div><div class="d">Confirm the Occupancy Certificate before registration.</div></div></div>`;
   else if (dl.overdue_months) verdict = `<div class="flagrow critical"><span>⛔</span><div><div class="t">Overdue by ${dl.overdue_months} months vs RERA date</div><div class="d">Under RERA Sec 18 allottees can claim interest for every month of delay, or a full refund with interest.</div></div></div>`;
   else if (dl.on_track === false) verdict = `<div class="flagrow warning"><span>⚠</span><div><div class="t">At risk of delay</div><div class="d">${dl.progress_pct}% built with ${dl.months_to_rera_date} months left.</div></div></div>`;
+  else if (!p.rera_possession_date) verdict = `<div class="flagrow info"><span>ℹ</span><div><div class="t">Completion date not in the register list</div><div class="d">Open the project's RERA page (button at the top) for the declared completion date and quarterly progress.</div></div></div>`;
   else verdict = `<div class="flagrow ok"><span>✓</span><div><div class="t">Looks on track</div><div class="d">${dl.months_to_rera_date ?? "—"} months to the RERA possession date.</div></div></div>`;
   return `
   <section class="card block" id="sec-delivery">
@@ -274,8 +276,9 @@ function approvals(d) {
       <tr><th>What to check on the portal</th><td class="small">Quarterly progress reports, approved plans, number of units booked, litigation disclosed by builder, extension orders, complaints & orders against the project.</td></tr>
     </tbody></table></div>
 
-    <h2 style="margin-top:20px">Government approvals <span class="small muted">${ap.obtained_count} obtained · ${ap.pending_count} pending · ${ap.missing_count} missing/unverified · completeness ${ap.completeness_pct ?? "—"}%</span></h2>
-    ${ap.missing_count ? `<div class="flagrow critical" style="margin-bottom:10px"><span>⛔</span><div><div class="t">Missing or unverified</div><div class="d">${esc(ap.missing.join(", "))}</div></div></div>` : ""}
+    <h2 style="margin-top:20px">Government approvals <span class="small muted">${ap.obtained_count} confirmed · ${ap.pending_count} pending · ${ap.missing_count} missing · ${ap.unverified_count} not verified</span></h2>
+    ${ap.missing_count ? `<div class="flagrow critical" style="margin-bottom:10px"><span>⛔</span><div><div class="t">Missing</div><div class="d">${esc(ap.missing.join(", "))}</div></div></div>` : ""}
+    ${ap.unverified_count && !p.is_demo ? `<div class="flagrow info" style="margin-bottom:10px"><span>ℹ</span><div><div class="t">Not verified yet</div><div class="d">The RERA register lists the project but not each approval. Builders upload approval documents on the RERA portal — open it above and check them, or ask the builder for copies.</div></div></div>` : ""}
     <div class="table-wrap"><table class="data">
       <thead><tr><th></th><th>Approval</th><th>Issuing authority</th><th>Status</th><th>Reference / date</th></tr></thead>
       <tbody>${ap.items.map((a) => `<tr>
@@ -283,7 +286,7 @@ function approvals(d) {
         <td><strong>${esc(a.name)}</strong>${a.applies_when ? `<div class="small muted">Applies: ${esc(a.applies_when)}</div>` : ""}
           <details class="why"><summary>Why it matters</summary><div class="small">${esc(a.why)}</div></details></td>
         <td class="small">${esc(a.authority)}</td>
-        <td><span class="badge ${a.status === "Obtained" ? "good" : a.status === "Pending" ? "warn" : ["Missing", "Unknown"].includes(a.status) ? "bad" : ""}">${esc(a.status)}</span>${a.notes ? `<div class="small muted">${esc(a.notes)}</div>` : ""}</td>
+        <td><span class="badge ${a.status === "Obtained" ? "good" : a.status === "Pending" ? "warn" : a.status === "Missing" ? "bad" : ""}">${esc(STATUS_LABEL[a.status] || a.status)}</span>${a.notes ? `<div class="small muted">${esc(a.notes)}</div>` : ""}</td>
         <td class="small">${a.reference ? `<code>${esc(a.reference)}</code>` : "—"}${a.issued_on ? `<div>${date(a.issued_on, true)}</div>` : ""}${a.document_url ? `<a href="${esc(a.document_url)}" target="_blank" rel="noopener">Document ↗</a>` : ""}</td>
       </tr>`).join("")}</tbody>
     </table></div>
@@ -392,9 +395,9 @@ function locationSec(d) {
     <h2>Location & connectivity <a class="btn small" href="${esc(d.verify_links.map || "#")}" target="_blank" rel="noopener">Open map ↗</a></h2>
     <div class="cols">
       <div class="mini-map" id="miniMap"></div>
-      <table class="data"><thead><tr><th>Nearby</th><th></th><th class="num">Distance</th></tr></thead><tbody>
+      ${near.length ? `<table class="data"><thead><tr><th>Nearby</th><th></th><th class="num">Distance</th></tr></thead><tbody>
         ${near.map((n) => `<tr><td class="small muted">${esc(n.category)}</td><td>${esc(n.name)}</td><td class="num">${n.distance_km} km</td></tr>`).join("")}
-      </tbody></table>
+      </tbody></table>` : `<div class="small muted">${d.property.address ? `<p><strong>Address on the register:</strong> ${esc(d.property.address)}${d.property.pincode ? " – " + esc(d.property.pincode) : ""}</p>` : ""}<p>Nearby schools, hospitals and transit aren't recorded for this project yet. Use “Open map” to explore the area.</p></div>`}
     </div>
   </section>`;
 }
@@ -422,7 +425,7 @@ function costs(d) {
     <h2>Total cost of ownership & EMI</h2>
     <p class="small muted">The sticker price is never what you pay. Pick a configuration and adjust — rates are pre-filled for ${esc(d.property.state)} and are indicative; confirm with the sub-registrar and builder cost sheet.</p>
     <div class="calc-grid">
-      <div><label class="field">Configuration</label><select id="cCfg">${d.configurations.map((c, i) => `<option value="${i}">${esc(c.label)} · ${inr(c.price_min)}</option>`).join("")}</select></div>
+      <div><label class="field">Configuration</label><select id="cCfg">${d.configurations.length ? d.configurations.map((c, i) => `<option value="${i}">${esc(c.label)}${c.price_min ? " · " + inr(c.price_min) : ""}</option>`).join("") : '<option value="">Enter a price →</option>'}</select></div>
       <div><label class="field">Base price (₹)</label><input type="number" id="cBase" step="10000" /></div>
       <div><label class="field">Car parking (₹)</label><input type="number" id="cPark" value="300000" step="10000" /></div>
       <div><label class="field">Clubhouse / PLC / misc (₹)</label><input type="number" id="cMisc" value="250000" step="10000" /></div>
@@ -452,7 +455,7 @@ function bindCostCalc(d) {
   if (!$("#cCfg")) return;
   const sc = d.state_costs;
   const v = (id) => parseFloat($("#" + id).value) || 0;
-  const setBase = () => ($("#cBase").value = d.configurations[+$("#cCfg").value]?.price_min || 0);
+  const setBase = () => ($("#cBase").value = d.configurations[+$("#cCfg").value]?.price_min || $("#cBase").value || 10000000);
   const calc = () => {
     const base = v("cBase");
     const woman = $("#cWoman").checked;
@@ -529,7 +532,8 @@ function scoreCard(d) {
   return `<div class="card panel" id="scoreCard">
     <h3>Trust score breakdown</h3>
     ${Object.entries(t.components).map(([k, v]) => `<div style="margin-bottom:8px"><div class="row" style="justify-content:space-between"><span class="small">${names[k]}</span><span class="small"><strong>${v}</strong> / ${t.max[k]}</span></div><div class="bar"><span style="width:${(v / t.max[k]) * 100}%"></span></div></div>`).join("")}
-    <div class="costline total"><span>Total</span><span>${t.score} / 100 · ${t.grade}</span></div>
+    <div class="costline total"><span>Total</span><span>${t.score} / 100 · ${t.limited ? "limited data" : t.grade}</span></div>
+    ${t.limited ? `<p class="small" style="margin-top:6px"><strong>Limited data (${t.coverage_pct}%).</strong> Parts we have no information on yet (${Object.entries(t.known).filter(([, v]) => !v).map(([k]) => names[k]).join(", ")}) get a neutral middle score, so treat this number as provisional.</p>` : ""}
     <p class="small muted">A heuristic to help you prioritise due diligence — not a rating or a recommendation.</p>
   </div>`;
 }

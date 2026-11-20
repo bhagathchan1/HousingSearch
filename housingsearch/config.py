@@ -9,7 +9,10 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 WEB_DIR = ROOT_DIR / "web"
 DATA_DIR = Path(os.environ.get("HS_DATA_DIR", ROOT_DIR / "data"))
 DB_PATH = Path(os.environ.get("HS_DB_PATH", DATA_DIR / "housingsearch.db"))
-SEED_FILE = DATA_DIR / "seed" / "demo_properties.json"
+SEED_DIR = DATA_DIR / "seed"
+SEED_FILE = SEED_DIR / "demo_properties.json"
+# Demo data is loaded only when no real seed files exist, unless HS_DEMO=1 (always) or 0 (never).
+DEMO = os.environ.get("HS_DEMO", "auto").lower()
 
 HOST = os.environ.get("HS_HOST", "127.0.0.1")
 PORT = int(os.environ.get("HS_PORT") or os.environ.get("PORT") or "8000")

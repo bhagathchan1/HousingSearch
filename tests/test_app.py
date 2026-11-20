@@ -20,7 +20,7 @@ ROOT = config.ROOT_DIR
 @pytest.fixture(scope="module")
 def client(tmp_path_factory):
     path = tmp_path_factory.mktemp("db") / "test.db"
-    with TestClient(create_app(db_path=path)) as c:
+    with TestClient(create_app(db_path=path, seeds=[config.SEED_FILE])) as c:
         yield c
 
 

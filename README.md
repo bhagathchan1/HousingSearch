@@ -12,7 +12,7 @@ short_description: Every project, price, RERA status & approval in one place
 
 # 🏠 HousingSearch — every project, every price, one place
 
-**🌐 Live demo: [housingsearch.onrender.com](https://housingsearch.onrender.com)**. It runs on demo data, on Render's free plan: if nobody has visited for a while, the first load takes about a minute while it wakes up.
+**🌐 Live demo: [housingsearch.onrender.com](https://housingsearch.onrender.com)**. It runs on Render's free plan: if nobody has visited for a while, the first load takes about a minute while it wakes up.
 
 **HousingSearch** pulls together everything you need to research a residential project in an Indian city, so you don't have to cross-check Housing.com, 99acres, MagicBricks, NoBroker, builder sites, brokers, RERA portals and forums one by one.
 
@@ -46,7 +46,7 @@ And across a whole city:
 * **Buyer's guide**: RERA rights, approvals explained stage by stage, how to read prices, red flags to walk away from.
 * Light/dark mode, mobile-friendly, printable project reports (Print → PDF).
 
-> **About the bundled data.** The repository ships with a **synthetic demo dataset** (154 projects across Bengaluru, Mumbai, Pune, Hyderabad, Chennai, Gurugram and Noida) so every feature works the moment you start it. Builders, projects, RERA numbers (prefixed `DEMO-`), prices, reviews and cases are **fictional**; localities, airports, state rules and RERA portal links are real. The UI shows a banner while demo data is loaded. See [Loading real data](#-loading-real-data).
+> **About the bundled data.** The repository ships with **8,076 real projects from four official state RERA registers**: **Bengaluru 4,743** (RERA Karnataka, every residential project in Bengaluru Urban and Rural), **Gurugram 968** (HRERA), **Chennai area 770** (TNRERA, 2024–2026 registrations) and **Mumbai 907 · Pune 425 · Thane 263** (MahaRERA, the newest ~600 per district). They include the RERA number, builder, location, registration and completion dates, status and, where the register publishes them, map location, unit mix and approval references. Registers don't publish **prices or reviews**, so those show as "not published" until you add them ([Loading real data](#-loading-real-data)). **Hyderabad** isn't covered yet: Telangana's RERA search is behind a CAPTCHA. A synthetic demo dataset (fictional projects for every feature) is still included and loads only when no real data is present, or with `HS_DEMO=1`.
 
 ---
 
@@ -84,7 +84,7 @@ run.bat
 
 Then open **http://localhost:8000** in your browser. 🎉
 
-The script creates a virtual environment in `.venv`, installs the three dependencies, and starts the server. On first start the database (`data/housingsearch.db`) is created and filled with the demo data automatically.
+The script creates a virtual environment in `.venv`, installs the three dependencies, and starts the server. On first start the database (`data/housingsearch.db`) is created and filled from the bundled RERA data automatically.
 
 ### Option B — step by step
 
@@ -116,7 +116,9 @@ Data is kept in the `housingsearch-data` Docker volume.
 | Auto-reload while editing code | `python -m housingsearch serve --reload` |
 | Use a different database file | `HS_DB_PATH=/path/to/my.db python -m housingsearch serve` |
 | Enable the write API | `HS_ADMIN_TOKEN=some-secret python -m housingsearch serve` |
-| Reset to fresh demo data | `python -m housingsearch seed --reset` |
+| Reset to the bundled data | `python -m housingsearch seed --reset` |
+| Refresh projects from the RERA registers | `python -m housingsearch import-rera ka hr tn mh --save-seed` |
+| Explore with the fictional demo data instead | `HS_DEMO=1 python -m housingsearch seed --reset` |
 | Regenerate the demo dataset | `python scripts/generate_demo_data.py --seed 7` then `python -m housingsearch seed --reset` |
 | See what's in the database | `python -m housingsearch stats` |
 | Browse the API | http://localhost:8000/docs (interactive Swagger UI) |
@@ -171,6 +173,11 @@ Grades: **A** ≥ 85 · **B** ≥ 70 · **C** ≥ 55 · **D** below. The score h
 Portals like Housing.com and 99acres **don't allow automated scraping** in their terms of use, so HousingSearch doesn't scrape them. Instead it imports data you're allowed to use, keeps the source and date of every number, and links you to each portal for live checks. Full guide: [docs/DATA_SOURCES.md](docs/DATA_SOURCES.md).
 
 ```bash
+# 0. Official state RERA registers: Karnataka, Gurugram, Tamil Nadu, Maharashtra (details: docs/DATA_SOURCES.md)
+python -m housingsearch import-rera ka hr tn mh
+```
+
+```bash
 # 1. Full project records (RERA details, approvals, configs, quotes, reviews…) as JSON
 python -m housingsearch import-json examples/sample_import.json
 
@@ -188,7 +195,7 @@ curl -X POST http://localhost:8000/api/admin/import \
 
 * Re-importing is safe: projects are matched by slug, then RERA number, then name + locality + city. New price quotes and reviews are **added to the history**, never duplicated.
 * Field-by-field format, approval codes and merge rules: [docs/DATA_FORMAT.md](docs/DATA_FORMAT.md).
-* To run with **only** real data: `rm data/housingsearch.db`, then import your files (the demo data is loaded only into an empty database; delete `data/seed/demo_properties.json` to disable it entirely).
+* The demo data is used only when `data/seed` has no real files; force it on or off with `HS_DEMO=1` / `HS_DEMO=0`.
 
 ---
 
@@ -235,7 +242,9 @@ HousingSearch/
 │   ├── index.html
 │   ├── css/styles.css        light + dark themes, responsive
 │   └── js/                   app.js (router), api.js, state.js, util.js, charts.js, views/*
-├── data/seed/demo_properties.json   synthetic demo dataset
+├── data/seed/rera_*.json           real projects from state RERA registers
+├── data/seed/demo_properties.json   synthetic demo dataset (fallback)
+├── housingsearch/rera/              importers for Karnataka, Haryana, Tamil Nadu, Maharashtra
 ├── scripts/generate_demo_data.py    regenerates the demo dataset
 ├── examples/                 sample JSON and CSV import files
 ├── tests/test_app.py         API, importer and analytics tests

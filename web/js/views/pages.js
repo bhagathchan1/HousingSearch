@@ -1,6 +1,6 @@
 // Secondary pages: compare, shortlist, localities, builder, calculators, guide, about.
 import { api } from "../api.js";
-import { $, $$, esc, inr, psf, num, pct, date, trendArrow, stars, scoreRing, reraBadge, statusBadge, emi, toast } from "../util.js";
+import { $, $$, esc, inr, psf, num, pct, date, trendArrow, stars, scoreRing, reraBadge, statusBadge, emi, toast, priceRange } from "../util.js";
 import { state, onChange } from "../state.js";
 import { cardHtml, bindCardActions } from "./explore.js";
 
@@ -21,10 +21,10 @@ export async function renderCompare(main, meta, query = {}) {
   const rows = [
     ["Builder", (d) => esc(d.builder?.name || "—")],
     ["Locality", (d) => esc(`${d.property.locality}, ${d.property.city}`)],
-    ["Trust score", (d) => `${d.trust.score} (${d.trust.grade})`, (d) => d.trust.score, "max"],
+    ["Trust score", (d) => `${d.trust.score} (${d.trust.limited ? "limited data" : d.trust.grade})`, (d) => d.trust.score, "max"],
     ["Status", (d) => statusBadge(d.property.status)],
     ["RERA", (d) => reraBadge(d.property.rera_status)],
-    ["Price range", (d) => `${inr(d.summary.price_min)} – ${inr(d.summary.price_max)}`, (d) => d.summary.price_min, "min"],
+    ["Price range", (d) => priceRange(d.summary.price_min, d.summary.price_max), (d) => d.summary.price_min, "min"],
     ["Median ₹/sq ft", (d) => psf(d.prices.psf_median), (d) => d.prices.psf_median, "min"],
     ["vs locality", (d) => (d.fair_price.delta_pct != null ? pct(d.fair_price.delta_pct) : "—"), (d) => d.fair_price.delta_pct, "min"],
     ["12-month change", (d) => trendArrow(d.prices.change_12m_pct) || "—", (d) => d.prices.change_12m_pct, "max"],
@@ -321,6 +321,12 @@ export async function renderAbout(main, meta) {
   main.innerHTML = `
   <div class="prose">
     <h1>Data & sources</h1>
+    ${meta.has_real_data ? `<div class="flagrow ok"><span>✓</span><div><div class="t">Projects come from official state RERA registers</div><div class="d">${meta.sources.map((x) => `${esc(x.authority)}: ${x.count.toLocaleString("en-IN")}`).join(" · ")}. Each project links back to its register entry. Registers list the project, builder, RERA number and dates; prices, reviews and most approvals are not part of them, so those show as “not published” / “not verified” until added.</div></div></div>
+    <h2>Cities not covered yet</h2>
+    <ul>
+      <li><strong>Hyderabad (Telangana):</strong> TG RERA's project search is protected by a CAPTCHA, so it isn't queried automatically. Search pages you save from the TG RERA site can be imported (<code>import-rera tg --from-file</code>), and an RTI request for the full list is drafted in the repository (docs/RTI_TG_RERA.md).</li>
+      <li><strong>Noida (Uttar Pradesh):</strong> the UP RERA portal was down for maintenance when the importers were built.</li>
+    </ul>` : ""}
     ${meta.has_demo_data ? `<div class="flagrow warning"><span>⚠</span><div><div class="t">This instance is running on synthetic demo data</div><div class="d">All builders, projects, RERA numbers (prefixed DEMO-), prices, reviews and cases are generated so every feature can be explored. Localities, airports, state rules and RERA portal links are real.</div></div></div>` : ""}
     <h2>What is collected for every project</h2>
     <ul>

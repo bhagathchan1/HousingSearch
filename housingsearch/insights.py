@@ -197,7 +197,11 @@ def approvals_summary(prop: dict, approvals: list[dict]) -> dict:
         )
     due = [i for i in items if i["status"] not in ("Not Yet Due", "Not Applicable")]
     obtained = [i for i in due if i["status"] == "Obtained"]
-    missing = [i for i in due if i["status"] == "Missing" or (i["status"] == "Unknown" and i["mandatory"])]
+    # Only an explicit "Missing" counts against a project. "Unknown" means nobody has
+    # verified it yet (typical for data imported from a RERA register), which is shown
+    # separately so real projects are not accused of lacking approvals they may have.
+    missing = [i for i in due if i["status"] == "Missing"]
+    unverified = [i for i in due if i["status"] == "Unknown" and i["mandatory"]]
     pending = [i for i in due if i["status"] == "Pending"]
     return {
         "items": items,
@@ -206,6 +210,8 @@ def approvals_summary(prop: dict, approvals: list[dict]) -> dict:
         "pending_count": len(pending),
         "missing_count": len(missing),
         "missing": [i["name"] for i in missing],
+        "unverified_count": len(unverified),
+        "unverified": [i["name"] for i in unverified],
         "completeness_pct": round(len(obtained) / len(due) * 100) if due else None,
     }
 
@@ -272,12 +278,18 @@ def red_flags(prop, builder, prices, delivery, approvals, reviews, litigation) -
 
     if approvals.get("missing_count"):
         add("critical" if approvals["missing_count"] >= 2 else "warning",
-            f"{approvals['missing_count']} required approval(s) missing or unverified",
+            f"{approvals['missing_count']} required approval(s) missing",
             ", ".join(approvals["missing"]))
+    if approvals.get("unverified_count"):
+        add("info", f"{approvals['unverified_count']} approval(s) not verified yet",
+            "No record yet for: " + ", ".join(approvals["unverified"])
+            + ". Ask the builder for copies and check the documents uploaded on the RERA portal.")
 
     if delivery.get("overdue_months"):
-        add("critical", f"Possession overdue by {delivery['overdue_months']} months",
-            "Past the RERA-declared date. You may be entitled to interest for delay under RERA Sec 18.")
+        add("critical" if delivery["overdue_months"] >= 6 else "warning",
+            f"Past the RERA completion date by {delivery['overdue_months']} months",
+            "No completion is recorded. Check the RERA portal for an extension or completion certificate; "
+            "for a genuine delay, RERA Section 18 entitles buyers to interest or a refund.")
     elif delivery.get("on_track") is False:
         add("warning", "Construction pace looks behind schedule",
             f"{delivery.get('progress_pct')}% complete with {delivery.get('months_to_rera_date')} months to the RERA date.")
@@ -307,14 +319,16 @@ def red_flags(prop, builder, prices, delivery, approvals, reviews, litigation) -
         add("warning", f"{reviews['negative_pct']}% of reviews are negative",
             "Top concerns: " + ", ".join(t["theme"] for t in reviews.get("themes", []) if t["tone"] == "negative")[:200])
 
-    if not prop.get("bank_approvals"):
+    if prop.get("is_demo") and not prop.get("bank_approvals"):
         add("info", "No bank loan approvals recorded", "Major banks pre-approving a project is a useful independent check.")
 
-    if prop.get("status") == "Ready to Move" and any(
-        i["code"] == "OC" and i["status"] != "Obtained" for i in approvals.get("items", [])
-    ):
-        add("critical", "Ready-to-move but Occupancy Certificate not confirmed",
+    oc = next((i for i in approvals.get("items", []) if i["code"] == "OC"), None)
+    if prop.get("status") == "Ready to Move" and oc and oc["status"] in ("Missing", "Pending"):
+        add("critical", "Ready-to-move but Occupancy Certificate not issued",
             "Do not take possession or register without OC.")
+    elif prop.get("status") == "Ready to Move" and oc and oc["status"] == "Unknown":
+        add("info", "Occupancy Certificate not verified",
+            "Ask the builder for the OC and check it before registration or possession.")
 
     order = {"critical": 0, "warning": 1, "info": 2}
     return sorted(flags, key=lambda f: order[f["level"]])
@@ -324,7 +338,9 @@ def trust_score(prop, builder, delivery, approvals, reviews, litigation) -> dict
     """0-100 heuristic. Transparent: returns the components."""
     comp = {}
     comp["rera"] = {"Registered": 25, "Applied": 8}.get(prop.get("rera_status"), 0)
-    comp["approvals"] = round(25 * (approvals.get("completeness_pct") or 0) / 100)
+    due = approvals.get("due_count") or 0
+    # unverified approvals earn half credit: neither confirmed nor known to be missing
+    comp["approvals"] = round(25 * (approvals.get("obtained_count", 0) + 0.5 * approvals.get("unverified_count", 0)) / due) if due else 12
     if builder and builder.get("on_time_delivery_pct") is not None:
         comp["builder"] = round(20 * builder["on_time_delivery_pct"] / 100)
     else:
@@ -343,7 +359,20 @@ def trust_score(prop, builder, delivery, approvals, reviews, litigation) -> dict
     comp["legal"] = max(0, 5 - 2 * open_cases)
     score = sum(comp.values())
     grade = "A" if score >= 85 else "B" if score >= 70 else "C" if score >= 55 else "D"
-    return {"score": score, "grade": grade, "components": comp,
+    # How much of the score rests on real information rather than neutral defaults.
+    known = {
+        "rera": bool(prop.get("rera_status")),
+        "approvals": any(i["status"] not in ("Unknown",) and i["code"] != "RERA"
+                         for i in approvals.get("items", []) if i["status"] not in ("Not Yet Due", "Not Applicable")),
+        "builder": bool(builder and builder.get("on_time_delivery_pct") is not None),
+        "delivery": bool(prop.get("rera_possession_date")),
+        "reviews": bool(reviews.get("count")),
+        "legal": bool(litigation) or bool(prop.get("is_demo")),
+    }
+    coverage = round(sum(known.values()) / len(known) * 100)
+    limited = coverage < 60
+    return {"score": score, "grade": "?" if limited else grade, "components": comp, "known": known,
+            "coverage_pct": coverage, "limited": limited,
             "max": {"rera": 25, "approvals": 25, "builder": 20, "delivery": 15, "reviews": 10, "legal": 5}}
 
 

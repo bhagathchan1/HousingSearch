@@ -64,6 +64,7 @@ CITY_STATE = {
     "Bengaluru": "Karnataka",
     "Mumbai": "Maharashtra",
     "Pune": "Maharashtra",
+    "Thane": "Maharashtra",
     "Hyderabad": "Telangana",
     "Chennai": "Tamil Nadu",
     "Gurugram": "Haryana",

@@ -16,13 +16,28 @@ from . import __version__, config, db, ingest
 from .repository import Repository
 
 
-def create_app(db_path: str | Path | None = None, seed_if_empty: bool = True) -> FastAPI:
+def seed_files(demo: str = config.DEMO) -> list[Path]:
+    """Seed files to load into an empty database.
+
+    Real data (data/seed/rera_*.json etc.) is preferred. The synthetic demo dataset is
+    used when there is no real data, or always/never with HS_DEMO=1/0.
+    """
+    real = sorted(p for p in config.SEED_DIR.glob("*.json") if p != config.SEED_FILE)
+    use_demo = demo in ("1", "true", "yes", "always") or (demo == "auto" and not real)
+    if demo in ("0", "false", "no", "never"):
+        use_demo = False
+    return real + ([config.SEED_FILE] if use_demo and config.SEED_FILE.exists() else [])
+
+
+def create_app(db_path: str | Path | None = None, seed_if_empty: bool = True,
+               seeds: list[Path] | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         conn = db.connect(db_path)
         db.init_schema(conn)
-        if seed_if_empty and db.is_empty(conn) and config.SEED_FILE.exists():
-            ingest.import_json(conn, config.SEED_FILE)
+        if seed_if_empty and db.is_empty(conn):
+            for f in seeds if seeds is not None else seed_files():
+                ingest.import_json(conn, f)
         app.state.conn = conn
         app.state.repo = Repository(conn)
         yield
@@ -159,6 +174,15 @@ def create_app(db_path: str | Path | None = None, seed_if_empty: bool = True) ->
         return {"imported": rec}
 
     # ------------------------------------------------------------------- web UI
+    @app.middleware("http")
+    async def revalidate_ui(request: Request, call_next):
+        # The UI is plain ES modules without hashed filenames, so browsers must revalidate
+        # them (cheap 304s via ETag) or they keep running old code after a deploy.
+        response = await call_next(request)
+        if not request.url.path.startswith("/api/"):
+            response.headers["Cache-Control"] = "no-cache"
+        return response
+
     app.mount("/static", StaticFiles(directory=config.WEB_DIR), name="static")
 
     @app.get("/", include_in_schema=False)

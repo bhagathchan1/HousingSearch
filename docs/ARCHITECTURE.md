@@ -40,6 +40,7 @@
 | `housingsearch/repository.py` | Queries, in-memory search index, upsert/merge logic |
 | `housingsearch/ingest.py` | JSON, CSV and single-URL (schema.org JSON-LD) importers |
 | `housingsearch/api.py` | HTTP API + static web UI |
+| `housingsearch/rera/` | State RERA importers (Karnataka, Haryana, Tamil Nadu, Maharashtra, Telangana from saved pages) and a polite, caching HTTP client |
 | `housingsearch/cli.py` | `serve`, `seed`, `import-json`, `import-quotes`, `import-url`, `stats` |
 | `scripts/generate_demo_data.py` | Reproducible synthetic dataset |
 | `web/` | UI: `app.js` (router/header), `views/explore.js`, `views/detail.js`, `views/pages.js`, `charts.js` |
