@@ -1,0 +1,14 @@
+# Render Blueprint: one-click deploy of HousingSearch on Render's free plan.
+# Use the "Deploy to Render" button in README.md, or Render dashboard → New → Blueprint.
+services:
+  - type: web
+    name: housingsearch
+    runtime: docker
+    plan: free
+    region: singapore          # closest Render region to India
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    autoDeploy: true           # redeploy on every push to main
+    envVars:
+      - key: HS_ADMIN_TOKEN    # enables POST /api/admin/*; see its value in the Render dashboard
+        generateValue: true

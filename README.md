@@ -119,15 +119,13 @@ Data is kept in the `housingsearch-data` Docker volume.
 | See what's in the database | `python -m housingsearch stats` |
 | Browse the API | http://localhost:8000/docs (interactive Swagger UI) |
 
-### Option D — put it online
+### Option D — put it online (free)
 
-Free public hosting on **Hugging Face Spaces** in one command (needs a free account and a write token):
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/bhagathchan1/HousingSearch)
 
-```bash
-HF_TOKEN=hf_your_token scripts/deploy_hf.sh <your-hf-username>
-```
+Click the button, sign in to [Render](https://render.com) (free plan), and press **Deploy Blueprint**. In about 5 minutes you get a public link like `https://housingsearch-xxxx.onrender.com`. Free instances sleep after 15 minutes without visitors; the next visit wakes them in about a minute.
 
-For permanent hosting with your own data and domain, use an always-on VM such as **Oracle Cloud Always Free**. Step-by-step guides for both, plus auto-deploy from GitHub: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+Other options (Oracle Cloud Always Free for a permanent server with your own domain, Hugging Face Spaces with a PRO plan) are covered in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ### Troubleshooting
 
@@ -241,9 +239,10 @@ HousingSearch/
 ├── tests/test_app.py         API, importer and analytics tests
 ├── docs/                     ARCHITECTURE.md, DATA_FORMAT.md, DATA_SOURCES.md, DEPLOYMENT.md, screenshots
 ├── run.sh / run.bat          one-command start
-├── Dockerfile, docker-compose.yml   (also used by Hugging Face Spaces)
-├── scripts/deploy_hf.sh             one-command Hugging Face deploy
-└── .github/workflows/        tests.yml (CI on Python 3.10–3.13), deploy-hf.yml (auto-deploy)
+├── Dockerfile, docker-compose.yml   (also used by Render / Hugging Face)
+├── render.yaml                      one-click Render deploy
+├── scripts/deploy_hf.sh             Hugging Face Spaces deploy (needs PRO)
+└── .github/workflows/        tests.yml (CI on Python 3.10–3.13), deploy-hf.yml (optional HF auto-deploy)
 ```
 
 Architecture notes: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).

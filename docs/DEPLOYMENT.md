@@ -1,15 +1,37 @@
 # Deploying HousingSearch
 
-| | Hugging Face Spaces | Oracle Cloud Always Free |
-|---|---|---|
-| Best for | A free public demo / sharing a link | Real data you import and keep, scheduled imports, custom domain |
-| Effort | ~10 minutes | 1–2 hours |
-| Data | Lost on restart (demo data reloads automatically) unless you add paid persistent storage | Kept on disk |
-| Always on | Sleeps after ~48 h without visitors, wakes on next visit (~30 s) | Yes |
+| | Render (free) | Oracle Cloud Always Free | Hugging Face Spaces |
+|---|---|---|---|
+| Cost | Free plan | Free (card for verification) | Docker Spaces need **PRO** (~$9/month) |
+| Best for | A shareable public demo | Real data you import and keep, scheduled imports, custom domain | If you already pay for PRO |
+| Effort | ~5 minutes, one click | 1–2 hours | ~5 minutes, one command |
+| Data | Resets on restart (demo data reloads automatically) | Kept on disk | Resets unless you add paid storage |
+| Always on | Sleeps after 15 min idle, ~1 min to wake | Yes | Yes (PRO) |
 
 ---
 
-## Hugging Face Spaces (recommended to start)
+## Render (recommended for a free demo)
+
+The repo contains `render.yaml`, a Render *Blueprint* that builds the `Dockerfile` on the free plan in the Singapore region.
+
+1. Open **https://render.com/deploy?repo=https://github.com/bhagathchan1/HousingSearch** (or click the *Deploy to Render* button in the README).
+2. Sign in to Render (easiest: *Sign in with GitHub*).
+3. Press **Deploy Blueprint**. The first build takes about 3–5 minutes; follow it under the service's **Logs**.
+4. Your app is at the URL shown on the service page, e.g. `https://housingsearch-xxxx.onrender.com`.
+
+After that, every push to `main` on GitHub redeploys automatically.
+
+**Good to know**
+* Free web services sleep after 15 minutes without traffic; the first request afterwards takes about a minute while it wakes.
+* The disk is temporary, so data imported through the admin API disappears on redeploy or restart. The demo dataset reloads automatically. To keep real data, commit it to the repo (for example replace `data/seed/demo_properties.json`), or use a VM.
+* `HS_ADMIN_TOKEN` is generated for you; find it under the service's **Environment** tab to use `POST /api/admin/import`.
+* The app listens on the `PORT` Render provides; locally it still defaults to 8000.
+
+---
+
+## Hugging Face Spaces (requires PRO)
+
+> Hugging Face now only runs Docker (and Gradio) Spaces on its free CPU hardware for **PRO** subscribers. Without PRO the deploy script stops with HTTP 402 and nothing is created.
 
 The repo is ready for a **Docker Space**: the settings block at the top of `README.md` tells Spaces to build the `Dockerfile` and serve port 8000.
 
@@ -48,7 +70,7 @@ In the Space → **Settings → Variables and secrets**:
 | `HS_DB_PATH` = `/data/housingsearch.db` | Variable | Use together with paid **Persistent storage** (Settings → Persistent storage) so imported data survives restarts |
 
 ### Things to know
-* Free Spaces (2 vCPU, 16 GB RAM) are plenty for this app.
+* The basic CPU hardware (2 vCPU, 16 GB RAM) is plenty for this app.
 * On the Space page the app runs inside an iframe; some browsers block storage there, so the shortlist and notes may not be saved. Share the **direct `.hf.space` link** instead.
 * Anything you import into a free Space disappears when it restarts or rebuilds. For data you want to keep, add your import files to the repo (e.g. replace `data/seed/demo_properties.json`) or move to a VM.
 

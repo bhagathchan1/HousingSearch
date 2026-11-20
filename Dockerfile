@@ -12,7 +12,6 @@ ENV HOME=/home/user \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     HS_HOST=0.0.0.0 \
-    HS_PORT=8000 \
     HS_DB_PATH=/home/user/app/data/housingsearch.db
 WORKDIR /home/user/app
 
@@ -26,5 +25,6 @@ COPY --chown=user scripts ./scripts
 COPY --chown=user examples ./examples
 
 EXPOSE 8000
-HEALTHCHECK CMD python -c "import urllib.request;urllib.request.urlopen('http://localhost:8000/api/health')" || exit 1
+# Listens on $PORT when the host sets it (Render, Railway, Cloud Run…), otherwise 8000.
+HEALTHCHECK CMD python -c "import os,urllib.request;urllib.request.urlopen('http://localhost:%s/api/health' % os.environ.get('PORT','8000'))" || exit 1
 CMD ["python", "-m", "housingsearch", "serve"]
