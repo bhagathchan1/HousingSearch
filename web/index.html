@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HousingSearch — every project, every price, one place</title>
+  <meta name="description" content="Compare residential projects across portals: latest prices by source, RERA status, government approvals, delivery timelines and reviews." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230f766e'/><path d='M7 16 16 8l9 8v9h-6v-6h-6v6H7z' fill='white'/></svg>" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  <link rel="stylesheet" href="/static/css/styles.css" />
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="#/">
+        <svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><rect width="32" height="32" rx="7" fill="var(--brand)"/><path d="M7 16 16 8l9 8v9h-6v-6h-6v6H7z" fill="#fff"/></svg>
+        <span>Housing<b>Search</b></span>
+      </a>
+      <label class="city-select" title="City">
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5Z"/></svg>
+        <select id="citySelect" aria-label="City"></select>
+      </label>
+      <div class="global-search" role="combobox" aria-expanded="false" aria-haspopup="listbox">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M10 2a8 8 0 0 1 6.3 12.9l5.4 5.4-1.4 1.4-5.4-5.4A8 8 0 1 1 10 2Zm0 2a6 6 0 1 0 0 12 6 6 0 0 0 0-12Z"/></svg>
+        <input id="globalSearch" type="search" autocomplete="off" placeholder="Search a project, builder, locality, RERA no. or PIN code…" aria-label="Search properties" />
+        <ul id="suggestions" class="suggestions" role="listbox" hidden></ul>
+      </div>
+      <button class="icon-btn theme-toggle" id="themeToggle" title="Toggle dark mode" aria-label="Toggle dark mode">
+        <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9Z"/></svg>
+      </button>
+      <button class="icon-btn menu-toggle" id="menuToggle" aria-label="Menu">
+        <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+      </button>
+    </div>
+    <nav class="mainnav" id="mainnav">
+      <a href="#/" data-nav="explore">Explore</a>
+      <a href="#/map" data-nav="map">Map</a>
+      <a href="#/localities" data-nav="localities">Localities</a>
+      <a href="#/compare" data-nav="compare">Compare <span class="count" id="compareCount"></span></a>
+      <a href="#/shortlist" data-nav="shortlist">Shortlist <span class="count" id="shortlistCount"></span></a>
+      <a href="#/tools" data-nav="tools">Calculators</a>
+      <a href="#/guide" data-nav="guide">Buyer's guide</a>
+      <a href="#/about" data-nav="about">Data &amp; sources</a>
+    </nav>
+  </header>
+
+  <div id="demoBanner" class="demo-banner" hidden>
+    <strong>Demo data.</strong> Projects, builders, prices and reviews shown are synthetic so you can try every feature.
+    Load real data with the importers — see <a href="#/about">Data &amp; sources</a>. Use the “Verify live” links on each project to check current prices on the portals.
+  </div>
+
+  <main id="main" tabindex="-1"></main>
+
+  <div id="compareTray" class="compare-tray" hidden></div>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <footer class="footer">
+    <div>HousingSearch · open source · <a href="https://github.com/bhagathchan1/HousingSearch" target="_blank" rel="noopener">GitHub</a> · <a href="/docs" target="_blank">API docs</a></div>
+    <div class="muted">Information is aggregated for research. Always verify on the state RERA portal and with a property lawyer before paying any amount.</div>
+  </footer>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script type="module" src="/static/js/app.js"></script>
+</body>
+</html>

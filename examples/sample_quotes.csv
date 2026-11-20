@@ -1,0 +1,5 @@
+project,city,locality,config_label,source,source_url,price,price_per_sqft,quoted_on,notes
+Example Meadows,Pune,Baner,2 BHK,Housing.com,https://housing.com/,1.18 Cr,11683,2026-11-02,Asking price on listing
+Example Meadows,Pune,Baner,2 BHK,99acres,https://www.99acres.com/,1.16 Cr,11485,2026-11-05,
+Example Meadows,Pune,Baner,3 BHK,Builder website,https://example.com/meadows,1.65 Cr,11538,2026-11-10,Excludes GST
+Unknown Project,Pune,Baner,2 BHK,MagicBricks,,90 L,,2026-11-10,Will not match any project

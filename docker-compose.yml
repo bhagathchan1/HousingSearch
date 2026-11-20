@@ -1,0 +1,12 @@
+services:
+  housingsearch:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      # Set to enable POST /api/admin/* endpoints
+      HS_ADMIN_TOKEN: ""
+    volumes:
+      - housingsearch-data:/data
+volumes:
+  housingsearch-data:

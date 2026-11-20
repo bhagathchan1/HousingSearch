@@ -1,0 +1,68 @@
+{
+  "properties": [
+    {
+      "name": "Example Meadows",
+      "builder": {
+        "name": "Example Developers",
+        "established_year": 2004,
+        "projects_delivered": 18,
+        "projects_ongoing": 4,
+        "on_time_delivery_pct": 72,
+        "avg_delay_months": 7,
+        "rera_complaints": 9,
+        "website": "https://example.com"
+      },
+      "city": "Pune",
+      "locality": "Baner",
+      "address": "Survey No. 00, Baner, Pune 411045",
+      "pincode": "411045",
+      "lat": 18.559,
+      "lng": 73.786,
+      "property_type": "Apartment",
+      "status": "Under Construction",
+      "launch_date": "2025-03-01",
+      "rera_number": "P52100000000",
+      "rera_status": "Registered",
+      "rera_possession_date": "2029-06-30",
+      "builder_possession_date": "2028-12-31",
+      "construction_progress": 35,
+      "total_units": 320,
+      "available_units": 140,
+      "towers": 3,
+      "floors": 24,
+      "land_area_acres": 4.2,
+      "open_space_pct": 70,
+      "amenities": ["Swimming pool", "Gym", "Clubhouse", "EV charging"],
+      "bank_approvals": ["SBI", "HDFC Bank"],
+      "description": "Example record showing every supported field. Replace with real data.",
+      "configurations": [
+        {"label": "2 BHK", "bhk": 2, "carpet_sqft": 760, "super_builtup_sqft": 1010, "price_min": 11500000, "price_max": 12400000, "units_total": 180, "units_available": 80, "facing": "East"},
+        {"label": "3 BHK", "bhk": 3, "carpet_sqft": 1080, "super_builtup_sqft": 1430, "price_min": 16200000, "price_max": 17800000, "units_total": 140, "units_available": 60}
+      ],
+      "price_quotes": [
+        {"config_label": "2 BHK", "source": "Builder website", "source_url": "https://example.com/meadows", "price": 11500000, "price_per_sqft": 11386, "quoted_on": "2026-10-01", "notes": "Excludes GST & parking"},
+        {"config_label": "2 BHK", "source": "Channel partner (broker)", "price": 11200000, "price_per_sqft": 11089, "quoted_on": "2026-10-15", "notes": "Festive offer"}
+      ],
+      "approvals": [
+        {"code": "TITLE", "status": "Obtained", "reference": "Title report by Adv. X", "issued_on": "2024-11-10"},
+        {"code": "EC", "status": "Obtained", "issued_on": "2024-11-01"},
+        {"code": "LAND_USE", "status": "Obtained", "reference": "NA order 000/2023"},
+        {"code": "PLAN", "status": "Obtained", "reference": "PMC/BP/000"},
+        {"code": "CC", "status": "Obtained", "reference": "PMC/CC/000"},
+        {"code": "ENV", "status": "Not Applicable", "notes": "Below 20,000 sq m"},
+        {"code": "FIRE", "status": "Pending"},
+        {"code": "WATER", "status": "Missing", "notes": "Not disclosed"}
+      ],
+      "reviews": [
+        {"source": "Reddit", "url": "https://www.reddit.com/r/pune/", "author": "u/example", "posted_on": "2026-09-20", "title": "Site visit", "body": "Construction quality looks good, progress on schedule."}
+      ],
+      "litigation": [
+        {"forum": "RERA", "case_ref": "CC000000000", "filed_on": "2026-02-01", "status": "Disposed", "summary": "Delay in agreement execution"}
+      ],
+      "nearby": [
+        {"category": "Metro", "name": "Balewadi metro station (planned)", "distance_km": 1.4},
+        {"category": "Airport", "name": "Pune International Airport", "distance_km": 19.5}
+      ]
+    }
+  ]
+}
