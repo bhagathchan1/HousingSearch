@@ -12,6 +12,8 @@ short_description: Every project, price, RERA status & approval in one place
 
 # 🏠 HousingSearch — every project, every price, one place
 
+**🌐 Live demo: [housingsearch.onrender.com](https://housingsearch.onrender.com)**. It runs on demo data, on Render's free plan: if nobody has visited for a while, the first load takes about a minute while it wakes up.
+
 **HousingSearch** pulls together everything you need to research a residential project in an Indian city, so you don't have to cross-check Housing.com, 99acres, MagicBricks, NoBroker, builder sites, brokers, RERA portals and forums one by one.
 
 Search for any project and see:
