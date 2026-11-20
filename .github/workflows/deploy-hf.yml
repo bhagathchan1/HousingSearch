@@ -1,0 +1,31 @@
+# Redeploys the Hugging Face Space on every push to main, after the tests pass.
+# One-time setup in GitHub → Settings → Secrets and variables → Actions:
+#   Secret   HF_TOKEN     a Hugging Face token with write access
+#   Variable HF_USERNAME  your Hugging Face username
+#   Variable HF_SPACE     (optional) Space name, default "HousingSearch"
+# Without HF_TOKEN the workflow does nothing.
+name: deploy-hf
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        if: env.HF_TOKEN != ''
+        with:
+          python-version: "3.12"
+      - name: Test
+        if: env.HF_TOKEN != ''
+        run: pip install -r requirements-dev.txt && pytest -q
+      - name: Deploy to Hugging Face Space
+        if: env.HF_TOKEN != ''
+        run: bash scripts/deploy_hf.sh "${{ vars.HF_USERNAME }}" "${{ vars.HF_SPACE || 'HousingSearch' }}"
+        env:
+          GITHUB_REPO: ${{ github.repository }}

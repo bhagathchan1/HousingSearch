@@ -4,6 +4,8 @@ services:
     ports:
       - "8000:8000"
     environment:
+      # Keep the database on the named volume so imports survive rebuilds
+      HS_DB_PATH: /data/housingsearch.db
       # Set to enable POST /api/admin/* endpoints
       HS_ADMIN_TOKEN: ""
     volumes:

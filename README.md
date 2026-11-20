@@ -1,3 +1,15 @@
+---
+title: HousingSearch
+emoji: 🏠
+colorFrom: green
+colorTo: blue
+sdk: docker
+app_port: 8000
+pinned: false
+license: mit
+short_description: Every project, price, RERA status & approval in one place
+---
+
 # 🏠 HousingSearch — every project, every price, one place
 
 **HousingSearch** pulls together everything you need to research a residential project in an Indian city, so you don't have to cross-check Housing.com, 99acres, MagicBricks, NoBroker, builder sites, brokers, RERA portals and forums one by one.
@@ -106,6 +118,16 @@ Data is kept in the `housingsearch-data` Docker volume.
 | Regenerate the demo dataset | `python scripts/generate_demo_data.py --seed 7` then `python -m housingsearch seed --reset` |
 | See what's in the database | `python -m housingsearch stats` |
 | Browse the API | http://localhost:8000/docs (interactive Swagger UI) |
+
+### Option D — put it online
+
+Free public hosting on **Hugging Face Spaces** in one command (needs a free account and a write token):
+
+```bash
+HF_TOKEN=hf_your_token scripts/deploy_hf.sh <your-hf-username>
+```
+
+For permanent hosting with your own data and domain, use an always-on VM such as **Oracle Cloud Always Free**. Step-by-step guides for both, plus auto-deploy from GitHub: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ### Troubleshooting
 
@@ -217,10 +239,11 @@ HousingSearch/
 ├── scripts/generate_demo_data.py    regenerates the demo dataset
 ├── examples/                 sample JSON and CSV import files
 ├── tests/test_app.py         API, importer and analytics tests
-├── docs/                     ARCHITECTURE.md, DATA_FORMAT.md, DATA_SOURCES.md, screenshots
+├── docs/                     ARCHITECTURE.md, DATA_FORMAT.md, DATA_SOURCES.md, DEPLOYMENT.md, screenshots
 ├── run.sh / run.bat          one-command start
-├── Dockerfile, docker-compose.yml
-└── .github/workflows/tests.yml      CI on Python 3.10, 3.12, 3.13
+├── Dockerfile, docker-compose.yml   (also used by Hugging Face Spaces)
+├── scripts/deploy_hf.sh             one-command Hugging Face deploy
+└── .github/workflows/        tests.yml (CI on Python 3.10–3.13), deploy-hf.yml (auto-deploy)
 ```
 
 Architecture notes: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
