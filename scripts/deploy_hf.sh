@@ -35,7 +35,7 @@ sed -i.bak "s#](docs/screenshots/#](https://raw.githubusercontent.com/$GITHUB_RE
 rm -f "$EXPORT/README.md.bak"
 
 # Fail early if anything binary slipped in (Hugging Face would reject the push).
-BIN=$(cd "$EXPORT" && find . -type f -exec file --mime-encoding {} + | grep -v -E ': (us-ascii|utf-8|unknown-8bit)$' || true)
+BIN=$(cd "$EXPORT" && find . -type f -exec file --mime-encoding {} + | grep -v -E ':[[:space:]]+(us-ascii|utf-8)$' || true)
 if [ -n "$BIN" ]; then
   echo "Binary files would be rejected by Hugging Face:" >&2
   echo "$BIN" >&2
